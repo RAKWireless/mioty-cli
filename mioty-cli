@@ -26,33 +26,40 @@ COLOR_END="\e[0m"
 
 # Shows options
 usage() {
+
+    COMMAND="mioty-cli"
+    if ! command -v $COMMAND &> /dev/null; then
+        COMMAND=$0
+    fi
+
     echo -e "${COLOR_INFO}Mioty CLI\nUtility to configure and manage Miromico's Miro EdgeCard for Mioty board.${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}Host configuration:${COLOR_END}"
     echo
-    echo -e "${COLOR_INFO}  $0 setup                --> setups connection and firewall rules${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 remove               --> deletes connection${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 up                   --> brings up connection to edge card${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 down                 --> brings down connection to edge card${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND setup                --> setups connection and firewall rules${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND remove               --> deletes connection${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND up                   --> brings up connection to edge card${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND down                 --> brings down connection to edge card${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}Edge card configuration:${COLOR_END}"
     echo
-    echo -e "${COLOR_INFO}  $0 start                --> starts base station${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 stop                 --> stops base station${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 restart              --> restarts base station${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 enable               --> enables base station on boot by default${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 disable              --> disables base station on boot by default${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 getall               --> gets params from builtin base station${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 set <param> <value>  --> sets a param of the builtin base station${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 cert <file>          --> pushes a certificate file to card${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 reset                --> resets base station params to factory values${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND start                --> starts base station${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND stop                 --> stops base station${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND restart              --> restarts base station${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND enable               --> enables base station on boot by default${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND disable              --> disables base station on boot by default${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND getall               --> gets params from builtin base station${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND set <param> <value>  --> sets a param of the builtin base station${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND cert <file>          --> pushes a certificate file to card${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND reset                --> resets base station params to factory values${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}Tool management:${COLOR_END}"
     echo
-    echo -e "${COLOR_INFO}  $0 version              --> show the currest script version${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 install              --> installs tool to user path${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 update               --> updates tool to the latest version${COLOR_END}"
-    echo -e "${COLOR_INFO}  $0 credentials          --> shows default credentials based on uniqueBaseStationId${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND version              --> show the currest script version${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND install              --> installs tool to user path${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND update               --> updates tool to the latest version${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND credentials          --> shows default credentials based on uniqueBaseStationId${COLOR_END}"
+
 }
 
 # Check single dependency
