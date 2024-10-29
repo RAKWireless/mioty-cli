@@ -4,7 +4,7 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.0
+VERSION=0.2.1
 CONNECTION_NAME=mioty
 MIROMICO_EDGECARD_MAC=E4:15:F6
 NMCLI_CONNECTION_CMD="nmcli --terse c"
@@ -52,6 +52,7 @@ usage() {
     echo -e "${COLOR_INFO}  $0 version              --> show the currest script version${COLOR_END}"
     echo -e "${COLOR_INFO}  $0 install              --> installs tool to user path${COLOR_END}"
     echo -e "${COLOR_INFO}  $0 update               --> updates tool to the latest version${COLOR_END}"
+    echo -e "${COLOR_INFO}  $0 credentials          --> shows default credentials based on uniqueBaseStationId${COLOR_END}"
 }
 
 # Check single dependency
@@ -422,6 +423,35 @@ install() {
 
 }
 
+credentials() {
+
+    check_connection_up
+    
+    rm -rf /tmp/mioty_bs_config.xml
+    scp -q -o ConnectTimeout=2 -o HostKeyAlgorithms=+ssh-rsa root@172.30.1.2:mioty_bs/mioty_bs_config.xml /tmp/mioty_bs_config.xml 
+    RESPONSE=$?
+    if [[ $RESPONSE -ne 0 ]]; then
+        echo -e "${COLOR_ERROR}ERROR: connection error, please check the connection is started${COLOR_END}\n"
+        exit 2
+    fi
+
+    UNIQUE_BASE_STATION_ID=$( cat /tmp/mioty_bs_config.xml | grep uniqueBaseStationId | cut -d'>' -f2 | cut -d'<' -f1 )
+    SERVICE_CENTER_ADDR=$( cat /tmp/mioty_bs_config.xml | grep serviceCenterAddr | cut -d'>' -f2 | cut -d'<' -f1 )
+
+    rm -rf /tmp/mioty_bs_config.xml     
+
+    LMAC=$( echo ${UNIQUE_BASE_STATION_ID:0-8} | sed 's/-//g' | tr [A-Z] [a-z] )
+    USERNAME="pockit+${LMAC}@miromico.io"
+    PASSWORD="a12${LMAC:0:3}_B34${LMAC:0-3}"
+
+    echo -e "${COLOR_INFO}Default credentials (mind these might have changed)${COLOR_END}"
+    echo
+    echo -e "${COLOR_INFO}Service center : https://${SERVICE_CENTER_ADDR}"
+    echo -e "${COLOR_INFO}Username       : ${USERNAME}"
+    echo -e "${COLOR_INFO}Password       : ${PASSWORD}"
+
+}
+
 # -----------------------------------------------------------------------------
 # Entry point
 # -----------------------------------------------------------------------------
@@ -526,6 +556,10 @@ case "${ACTION}" in
     
     "update")
         install 1
+        ;;
+    
+    "credentials")
+        credentials
         ;;
     
     *)

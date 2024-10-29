@@ -43,5 +43,6 @@ Tool management:
   mioty-cli version              --> show the currest script version
   mioty-cli install              --> installs tool to user path
   mioty-cli update               --> updates tool to the latest version
+  mioty-cli credentials          --> shows default credentials based on uniqueBaseStationId
 
 ```
