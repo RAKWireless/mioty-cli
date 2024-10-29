@@ -201,10 +201,13 @@ then
 
 ip route del default via 172.30.1.1
 echo 1 > /proc/sys/net/ipv4/ip_forward
-iptables -I DOCKER-USER -j ACCEPT -m comment --comment "${CONNECTION_NAME}" 
-iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 1.1.1.1:53 -m comment --comment "${CONNECTION_NAME}"  
-iptables -t nat -A POSTROUTING -o $EXTERNAL_IF -j MASQUERADE -m comment --comment "${CONNECTION_NAME}" 
-#iptables -A FORWARD -i $INTERNAL_IF -j ACCEPT
+
+if [ ! iptables-save | grep -c mioty ];
+then
+    iptables -t filter -I FORWARD -i $INTERNAL_IF -j ACCEPT -m comment --comment "${CONNECTION_NAME}" 
+    iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 1.1.1.1:53 -m comment --comment "${CONNECTION_NAME}"  
+    iptables -t nat -A POSTROUTING -o $EXTERNAL_IF -j MASQUERADE -m comment --comment "${CONNECTION_NAME}" 
+fi
 
 fi
 
