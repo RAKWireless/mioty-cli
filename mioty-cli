@@ -97,6 +97,7 @@ check_dependencies() {
     check_dependency nmcli 0 1
     check_dependency ssh 0 1
     check_dependency scp 0 1
+    check_dependency iptables 0 1
 }
 
 # Checks folder exists
@@ -130,7 +131,7 @@ compare_versions() {
 check_connection_exists() {
     CONNECTION_EXISTS=$( ${NMCLI_CONNECTION_CMD} show | grep -c ${CONNECTION_NAME} )
     if [ ${CONNECTION_EXISTS} -ne 1 ]; then
-        echo -e "${COLOR_ERROR}ERROR: run 'install' first to configure the connection${COLOR_END}"
+        echo -e "${COLOR_ERROR}ERROR: run 'setup' first to configure the connection${COLOR_END}"
         echo
         usage
         echo
@@ -166,7 +167,7 @@ settime() {
 
 #Gets unique base staion ID based on edge card MAC interface
 base_station_id() {
-    MAC=$( ip -o link | grep ether | awk '{ print $2"|"$17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | tail -1 | cut -d'|' -f2 )
+    MAC=$( ip -o link | grep ether | awk '{ print $2"|"$17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | head -n 1 | cut -d'|' -f2 )
     if [[ "${MAC}" != "" ]]; then
         echo "${MAC}" | awk -F: '{print $1"-"$2"-"$3"-FF-FE-"$4"-"$5"-"$6}' | tr 'a-z' 'A-Z'
     fi
@@ -179,10 +180,10 @@ base_station_id() {
 setup_connection() {
 
     # Identify interface by MAC
-    INTERNAL_IF=$( ip -o link | grep ether | awk '{ print $2 $17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | tail -1 | cut -d ":" -f1 )
+    INTERNAL_IF=$( ip -o link | grep ether | awk '{ print $2 $17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | head -n 1 | cut -d ":" -f1 )
 
     # Identify interface by traffic
-    EXTERNAL_IF=$( tail -n+3 < /proc/net/dev | sort -k2 -nr | head -n1 | cut -d ":" -f1 | sed 's/ //g' )
+    EXTERNAL_IF=$( ip -o -4 route show to default | awk '{print $5}' )
 
     # Check if there is a miromico connection
     CONNECTION_EXISTS=$( ${NMCLI_CONNECTION_CMD} | grep -c ${CONNECTION_NAME} )
@@ -200,23 +201,24 @@ setup_connection() {
     sudo ${NMCLI_CONNECTION_CMD} modify ${CONNECTION_NAME} ipv6.method ignore
 
     cat <<EOF > /tmp/99-${CONNECTION_NAME}
-#!/bin/sh -e
+#!/usr/bin/env bash
 
 INTERFACE=\$1
 EVENT=\$2
 
-if [ "\$INTERFACE" = "$INTERNAL_IF" ]
+if [[ "\$INTERFACE" = "$INTERNAL_IF" ]]
 then
 
-ip route del default via 172.30.1.1
-echo 1 > /proc/sys/net/ipv4/ip_forward
+    #ip route del default via 172.30.1.1
+    echo 1 > /proc/sys/net/ipv4/ip_forward
 
-if [ ! iptables-save | grep -c mioty ];
-then
-    iptables -t filter -I FORWARD -i $INTERNAL_IF -j ACCEPT -m comment --comment "${CONNECTION_NAME}" 
-    iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 1.1.1.1:53 -m comment --comment "${CONNECTION_NAME}"  
-    iptables -t nat -A POSTROUTING -o $EXTERNAL_IF -j MASQUERADE -m comment --comment "${CONNECTION_NAME}" 
-fi
+    iptables-save  | grep -q "${CONNECTION_NAME}"
+    if [[ \$? -eq 1 ]]
+    then
+        iptables -t filter -I FORWARD -i $INTERNAL_IF -j ACCEPT -m comment --comment "${CONNECTION_NAME}" 
+        iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 1.1.1.1:53 -m comment --comment "${CONNECTION_NAME}"  
+        iptables -t nat -A POSTROUTING -o $EXTERNAL_IF -j MASQUERADE -m comment --comment "${CONNECTION_NAME}" 
+    fi
 
 fi
 
@@ -233,8 +235,19 @@ EOF
 }
 
 remove_connection() {
+    
+    # Remove connection
     sudo ${NMCLI_CONNECTION_CMD} del ${CONNECTION_NAME}
     sudo rm -rf /etc/NetworkManager/dispatcher.d/99-${CONNECTION_NAME}
+
+    check_dependency iptables-save 0 1
+    check_dependency iptables-restore 0 1
+
+    # Remove firewall rules
+    sudo iptables-save | grep -v "${CONNECTION_NAME}" > /tmp/.iptables-rules
+    sudo iptables-restore < /tmp/.iptables-rules
+    sudo rm /tmp/.iptables-rules
+
 }
 
 start_connection() {
