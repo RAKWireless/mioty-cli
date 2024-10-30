@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.2.2 (Unreleased)
+## 0.2.2 (2024-10-30)
 
 * Add ssh and dashboard options
+* Improve iptables-save
 
 ## 0.2.1 (2024-10-29)
 
