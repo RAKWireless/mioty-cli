@@ -33,16 +33,18 @@ Edge card configuration:
   mioty-cli restart              --> restarts base station
   mioty-cli enable               --> enables base station on boot by default
   mioty-cli disable              --> disables base station on boot by default
-  mioty-cli getall               --> gets params from builtin packer forwarder
-  mioty-cli set <param> <value>  --> sets a param of the builtin packer forwarder
+  mioty-cli getall               --> gets params from builtin base station
+  mioty-cli set <param> <value>  --> sets a param of the builtin base station
   mioty-cli cert <file>          --> pushes a certificate file to card
   mioty-cli reset                --> resets base station params to factory values
+  mioty-cli ssh                  --> ssh to the EdgeCard
+  mioty-cli dashboard            --> create tunnel to access EdgCard dashboard
+  mioty-cli credentials          --> shows default credentials based on uniqueBaseStationId
 
 Tool management:
 
   mioty-cli version              --> show the currest script version
   mioty-cli install              --> installs tool to user path
   mioty-cli update               --> updates tool to the latest version
-  mioty-cli credentials          --> shows default credentials based on uniqueBaseStationId
 
 ```

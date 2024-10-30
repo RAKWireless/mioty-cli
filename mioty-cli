@@ -4,12 +4,12 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.1
+VERSION=0.2.2
 CONNECTION_NAME=mioty
 MIROMICO_EDGECARD_MAC=E4:15:F6
 NMCLI_CONNECTION_CMD="nmcli --terse c"
 SSH_HOST="root@172.30.1.2"
-SSH_CMD="ssh -o ConnectTimeout=10 -o HostKeyAlgorithms=+ssh-rsa ${SSH_HOST}"
+SSH_CMD="ssh -o ConnectTimeout=10 -o HostKeyAlgorithms=+ssh-rsa"
 SCP_CMD="scp -o ConnectTimeout=10 -o HostKeyAlgorithms=+ssh-rsa"
 
 REPOSITORY="https://github.com/RAKWireless/mioty-cli"
@@ -52,13 +52,15 @@ usage() {
     echo -e "${COLOR_INFO}  $COMMAND set <param> <value>  --> sets a param of the builtin base station${COLOR_END}"
     echo -e "${COLOR_INFO}  $COMMAND cert <file>          --> pushes a certificate file to card${COLOR_END}"
     echo -e "${COLOR_INFO}  $COMMAND reset                --> resets base station params to factory values${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND ssh                  --> ssh to the EdgeCard${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND dashboard            --> create tunnel to access EdgCard dashboard${COLOR_END}"
+    echo -e "${COLOR_INFO}  $COMMAND credentials          --> shows default credentials based on uniqueBaseStationId${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}Tool management:${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}  $COMMAND version              --> show the currest script version${COLOR_END}"
     echo -e "${COLOR_INFO}  $COMMAND install              --> installs tool to user path${COLOR_END}"
     echo -e "${COLOR_INFO}  $COMMAND update               --> updates tool to the latest version${COLOR_END}"
-    echo -e "${COLOR_INFO}  $COMMAND credentials          --> shows default credentials based on uniqueBaseStationId${COLOR_END}"
 
 }
 
@@ -152,14 +154,14 @@ check_connection_up() {
 # Remounts root partition as read-write in card
 mount_rw() {
     check_connection_up
-    ${SSH_CMD} "mount -o rw,remount /"
+    ${SSH_CMD} ${SSH_HOST} "mount -o rw,remount /"
 }
 
 # Sets card time to host time in UTC
 settime() {
     check_connection_up
     DATETIME=$( date --utc  +"%Y/%m/%d %H:%M:%S" )
-    ${SSH_CMD} "timedatectl set-timezone UTC ; timedatectl set-time '${DATETIME}'"
+    ${SSH_CMD} ${SSH_HOST} "timedatectl set-timezone UTC ; timedatectl set-time '${DATETIME}'"
 }
 
 #Gets unique base staion ID based on edge card MAC interface
@@ -261,22 +263,22 @@ disable_connection() {
 
 start_pf() {
     check_connection_up
-    ${SSH_CMD} "systemctl start mioty_bs"
+    ${SSH_CMD} ${SSH_HOST} "systemctl start mioty_bs"
 }
 
 stop_pf() {
     check_connection_up
-    ${SSH_CMD} "systemctl stop mioty_bs"
+    ${SSH_CMD} ${SSH_HOST} "systemctl stop mioty_bs"
 }
 
 enable_pf() {
     check_connection_up
-    ${SSH_CMD} "systemctl enable mioty_bs"
+    ${SSH_CMD} ${SSH_HOST} "systemctl enable mioty_bs"
 }
 
 disable_pf() {
     check_connection_up
-    ${SSH_CMD} "systemctl disable mioty_bs"
+    ${SSH_CMD} ${SSH_HOST} "systemctl disable mioty_bs"
 }
 
 getallparams() {
@@ -333,10 +335,10 @@ setparam() {
     mount_rw
 
     # Backup copy
-    ${SSH_CMD} "cd mioty_bs ; [ ! -f mioty_bs_config.xml.backup ] && cp mioty_bs_config.xml mioty_bs_config.xml.backup"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs ; [ ! -f mioty_bs_config.xml.backup ] && cp mioty_bs_config.xml mioty_bs_config.xml.backup"
 
     # Change value
-    ${SSH_CMD} "sed 's|\s*<parameter name=\"${PARAM}\">.*|    <parameter name=\"${PARAM}\">${VALUE}</parameter>|' -i mioty_bs/mioty_bs_config.xml"
+    ${SSH_CMD} ${SSH_HOST} "sed 's|\s*<parameter name=\"${PARAM}\">.*|    <parameter name=\"${PARAM}\">${VALUE}</parameter>|' -i mioty_bs/mioty_bs_config.xml"
     
 }
 
@@ -349,10 +351,10 @@ resetparams() {
     mount_rw
 
     # recover backup
-    ${SSH_CMD} "cd mioty_bs ; [ -f mioty_bs_config.xml.backup ] && cp mioty_bs_config.xml.backup mioty_bs_config.xml"
-    ${SSH_CMD} "cd mioty_bs/tls_certificates ; [ -f bstation.cer.backup ] && cp bstation.cer.backup bstation.cer"
-    ${SSH_CMD} "cd mioty_bs/tls_certificates ; [ -f bstation.key.backup ] && cp bstation.key.backup bstation.key"
-    ${SSH_CMD} "cd mioty_bs/tls_certificates ; [ -f root_ca.cer.backup ] && cp root_ca.cer.backup root_ca.cer"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs ; [ -f mioty_bs_config.xml.backup ] && cp mioty_bs_config.xml.backup mioty_bs_config.xml"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs/tls_certificates ; [ -f bstation.cer.backup ] && cp bstation.cer.backup bstation.cer"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs/tls_certificates ; [ -f bstation.key.backup ] && cp bstation.key.backup bstation.key"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs/tls_certificates ; [ -f root_ca.cer.backup ] && cp root_ca.cer.backup root_ca.cer"
 
 }
 
@@ -383,7 +385,7 @@ pushcert() {
     mount_rw
 
     # Backup copy
-    ${SSH_CMD} "cd mioty_bs/tls_certificates ; [ ! -f ${FILENAME}.backup ] && cp ${FILENAME} ${FILENAME}.backup"
+    ${SSH_CMD} ${SSH_HOST} "cd mioty_bs/tls_certificates ; [ ! -f ${FILENAME}.backup ] && cp ${FILENAME} ${FILENAME}.backup"
 
     # Push file
     ${SCP_CMD} "${FILE}" ${SSH_HOST}:mioty_bs/tls_certificates/
@@ -430,6 +432,21 @@ install() {
         echo -e "${COLOR_ERROR}ERROR: network error${COLOR_END}\n"
         exit 1
     fi
+
+}
+
+sshin() {
+    exec ${SSH_CMD} ${SSH_HOST}
+}
+
+dashboard() {
+    
+    IP=$( hostname -I | awk '{print $1}' )
+    PORT=8888
+
+    echo -e "${COLOR_INFO}Access dashboard on http://${IP}:${PORT} once the tunnel is created${COLOR_END}"
+    echo
+    ${SSH_CMD} "-L 0.0.0.0:${PORT}:localhost:8080" ${SSH_HOST}
 
 }
 
@@ -568,10 +585,18 @@ case "${ACTION}" in
         install 1
         ;;
     
+    "ssh")
+        sshin
+        ;;
+
+    "dashboard")
+        dashboard
+        ;;
+
     "credentials")
         credentials
         ;;
-    
+
     *)
         usage
 

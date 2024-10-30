@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.2.1 (Unreleased)
+## 0.2.2 (Unreleased)
+
+* Add ssh and dashboard options
+
+## 0.2.1 (2024-10-29)
 
 * Calculates default credentials
 
