@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 (2024-11-05)
+
+* Delete inbound route
+
 ## 0.2.2 (2024-10-30)
 
 * Add ssh and dashboard options

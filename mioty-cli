@@ -4,7 +4,7 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.2
+VERSION=0.2.3
 CONNECTION_NAME=mioty
 MIROMICO_EDGECARD_MAC=E4:15:F6
 NMCLI_CONNECTION_CMD="nmcli --terse c"
@@ -209,7 +209,7 @@ EVENT=\$2
 if [[ "\$INTERFACE" = "$INTERNAL_IF" ]]
 then
 
-    #ip route del default via 172.30.1.1
+    ip route del default via 172.30.1.1
     echo 1 > /proc/sys/net/ipv4/ip_forward
 
     iptables-save  | grep -q "${CONNECTION_NAME}"
