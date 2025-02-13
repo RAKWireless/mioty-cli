@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 (2025-02-12)
+
+* Fix MAC address of new cards
+
 ## 0.2.3 (2024-11-05)
 
 * Delete inbound route

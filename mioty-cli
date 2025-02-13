@@ -4,9 +4,9 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.3
+VERSION=0.2.4
 CONNECTION_NAME=mioty
-MIROMICO_EDGECARD_MAC=E4:15:F6
+MIROMICO_EDGECARD_MACS=( "e4:15:f6" "fa:c8:5d" )
 NMCLI_CONNECTION_CMD="nmcli --terse c"
 SSH_HOST="root@172.30.1.2"
 SSH_CMD="ssh -o ConnectTimeout=10 -o HostKeyAlgorithms=+ssh-rsa"
@@ -32,7 +32,7 @@ usage() {
         COMMAND=$0
     fi
 
-    echo -e "${COLOR_INFO}Mioty CLI\nUtility to configure and manage Miromico's Miro EdgeCard for Mioty board.${COLOR_END}"
+    echo -e "${COLOR_INFO}Mioty™ CLI\nUtility to configure and manage Miromico's Miro EdgeCard for Mioty™ board.${COLOR_END}"
     echo
     echo -e "${COLOR_INFO}Host configuration:${COLOR_END}"
     echo
@@ -165,12 +165,24 @@ settime() {
     ${SSH_CMD} ${SSH_HOST} "timedatectl set-timezone UTC ; timedatectl set-time '${DATETIME}'"
 }
 
-#Gets unique base staion ID based on edge card MAC interface
+# Gets edge card first MAC address
+get_interface() {
+
+    local MAC=""
+
+    for MAN in ${MIROMICO_EDGECARD_MACS[@]}; do
+        if [ $(ip -o link  | grep -ic $MAN) -ne 0 ]; then
+            MAC=$( ip -o link | grep -i "${MAN}" | awk '{ print $17 }' | head -n 1 )
+        fi
+    done
+
+    echo $MAC
+
+}
+
+#Gets unique base station ID based on edge card MAC interface
 base_station_id() {
-    MAC=$( ip -o link | grep ether | awk '{ print $2"|"$17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | head -n 1 | cut -d'|' -f2 )
-    if [[ "${MAC}" != "" ]]; then
-        echo "${MAC}" | awk -F: '{print $1"-"$2"-"$3"-FF-FE-"$4"-"$5"-"$6}' | tr 'a-z' 'A-Z'
-    fi
+    get_interface | awk -F: '{print $1"-"$2"-"$3"-FF-FE-"$4"-"$5"-"$6}' | tr 'a-z' 'A-Z'
 }
 
 # -----------------------------------------------------------------------------
@@ -179,8 +191,16 @@ base_station_id() {
 
 setup_connection() {
 
+    # Get MAC
+    MAC=$( get_interface )
+    if [[ "$MAC" == "" ]]; then
+        echo -e "${COLOR_ERROR}ERROR: could not find interface to card, please double check the card is connected${COLOR_END}"
+        echo
+        exit 2
+    fi
+    
     # Identify interface by MAC
-    INTERNAL_IF=$( ip -o link | grep ether | awk '{ print $2 $17 }' | grep -i "${MIROMICO_EDGECARD_MAC}" | head -n 1 | cut -d ":" -f1 )
+    INTERNAL_IF=$( ip -o link | grep -i $MAC | awk '{ print $2 }' | head -n 1 | cut -d ":" -f1 )
 
     # Identify interface by traffic
     EXTERNAL_IF=$( ip -o -4 route show to default | awk '{print $5}' )
