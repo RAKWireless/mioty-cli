@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 (2025-02-26)
+
+* Using Miromico USB string to identify card
+
 ## 0.2.4 (2025-02-12)
 
 * Fix MAC address of new cards

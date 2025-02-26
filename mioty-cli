@@ -4,9 +4,9 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.4
+VERSION=0.2.5
 CONNECTION_NAME=mioty
-MIROMICO_EDGECARD_MACS=( "e4:15:f6" "fa:c8:5d" )
+MICROMICO_STRING="GWC-62-MY-868"
 NMCLI_CONNECTION_CMD="nmcli --terse c"
 SSH_HOST="root@172.30.1.2"
 SSH_CMD="ssh -o ConnectTimeout=10 -o HostKeyAlgorithms=+ssh-rsa"
@@ -16,8 +16,9 @@ REPOSITORY="https://github.com/RAKWireless/mioty-cli"
 DIR_BIN="${HOME}/.local/bin"
 DIR_TMP="/tmp/.mioty-cli"
 
-COLOR_INFO="\e[32m" # green
-COLOR_ERROR="\e[33m" # yellow
+COLOR_INFO="\e[0;32m" # green
+COLOR_WARNING="\e[0;33m" # yellow
+COLOR_ERROR="\e[0;31m" # red
 COLOR_END="\e[0m"
 
 # -----------------------------------------------------------------------------
@@ -74,11 +75,12 @@ check_dependency() {
     if ! command -v "$COMMAND" &> /dev/null; then
         
         if [[ $INSTALLABLE -eq 1 ]]; then
-            echo "Missing dependency '$COMMAND'."
+            echo -e "${COLOR_WARNING}Missing dependency '$COMMAND'."
             read -rp "Do you want to install it now? [y/N]: " RESPONSE
-            echo 
+            echo -e "${COLOR_END}"
             if [[ "$RESPONSE" = "y" ]]; then
                 sudo apt install "$COMMAND" -y
+                echo 
                 return
             fi
         fi
@@ -98,6 +100,7 @@ check_dependencies() {
     check_dependency ssh 0 1
     check_dependency scp 0 1
     check_dependency iptables 0 1
+    check_dependency lshw 1 1
 }
 
 # Checks folder exists
@@ -165,19 +168,20 @@ settime() {
     ${SSH_CMD} ${SSH_HOST} "timedatectl set-timezone UTC ; timedatectl set-time '${DATETIME}'"
 }
 
-# Gets edge card first MAC address
+# Gets edge card first INTERFACE address
 get_interface() {
+    local INTERFACE=""
+    BUS=$( sudo lshw -quiet -businfo -c communication | grep "${MICROMICO_STRING}" | awk '{print $1}' )
+    if [ "$BUS" != "" ]; then
+        INTERFACE=$( sudo lshw -quiet -businfo -c network | grep "${BUS}" | head -n1 | awk '{print $2}' )
+    fi
+    echo $INTERFACE
+}
 
-    local MAC=""
-
-    for MAN in ${MIROMICO_EDGECARD_MACS[@]}; do
-        if [ $(ip -o link  | grep -ic $MAN) -ne 0 ]; then
-            MAC=$( ip -o link | grep -i "${MAN}" | awk '{ print $17 }' | head -n 1 )
-        fi
-    done
-
-    echo $MAC
-
+# Get MAC address for interface
+get_mac() {
+    INTERFACE=$1
+    MAC=$( ip -o link | grep -i "${INTERFACE}" | awk '{ print $17 }' | head -n 1 )
 }
 
 #Gets unique base station ID based on edge card MAC interface
@@ -191,17 +195,17 @@ base_station_id() {
 
 setup_connection() {
 
-    # Get MAC
-    MAC=$( get_interface )
-    if [[ "$MAC" == "" ]]; then
+    # Get INTERFACE
+    INTERNAL_IF=$( get_interface )
+    if [[ "$INTERNAL_IF" == "" ]]; then
         echo -e "${COLOR_ERROR}ERROR: could not find interface to card, please double check the card is connected${COLOR_END}"
         echo
         exit 2
     fi
-    
-    # Identify interface by MAC
-    INTERNAL_IF=$( ip -o link | grep -i $MAC | awk '{ print $2 }' | head -n 1 | cut -d ":" -f1 )
 
+    # Debug
+    echo -e "${COLOR_INFO}Miromico ${MICROMICO_STRING} card detected using ${INTERNAL_IF}${COLOR_END}\n"
+    
     # Identify interface by traffic
     EXTERNAL_IF=$( ip -o -4 route show to default | awk '{print $5}' )
 
