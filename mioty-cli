@@ -4,7 +4,7 @@
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-VERSION=0.2.6
+VERSION=0.2.7
 CONNECTION_NAME=mioty
 MICROMICO_STRING="GWC-62-MY-868"
 NMCLI_CONNECTION_CMD="nmcli --terse c"
@@ -80,7 +80,7 @@ check_dependency() {
             echo -e "${COLOR_END}"
             if [[ "$RESPONSE" = "y" ]]; then
                 sudo apt install "$COMMAND" -y
-                echo 
+                echo
                 return
             fi
         fi
@@ -100,6 +100,7 @@ check_dependencies() {
     check_dependency ssh 0 1
     check_dependency scp 0 1
     check_dependency iptables 0 1
+    check_dependency lshw 1 1
 }
 
 # Checks folder exists
@@ -170,9 +171,9 @@ set_time() {
 # Gets edge card first INTERFACE address
 get_interface() {
     local INTERFACE=""
-    BUS=$( grep -i ${MICROMICO_STRING} /sys/devices/platform/scb/*/usb*/driver/*/product 2>/dev/null | rev | cut -d'/' -f 2- | rev )
+    BUS=$(  lshw -quiet -businfo -c communication 2>/dev/null | grep ${MICROMICO_STRING} | awk '{print $1}' )
     if [ "${BUS}" != "" ]; then
-        INTERFACE=$( find ${BUS}/ -iname '*eth*' 2>/dev/null | rev | cut -d'/' -f1 | rev | sort | head -n1 )
+        INTERFACE=$( lshw -quiet -businfo -c network 2>/dev/null | grep "${BUS}" | head -n1 | awk '{print $2}' )
     fi
     echo $INTERFACE
 }
